@@ -237,6 +237,8 @@ module ActiveRecord
 
         attribute(name, **options)
 
+        pairs = value_pairs_for(values, name)
+
         decorate_attributes([name]) do |_name, subtype|
           if subtype == ActiveModel::Type.default_value
             raise "Undeclared attribute type for enum '#{name}' in #{self.name}. Enums must be" \
@@ -258,7 +260,6 @@ module ActiveRecord
             suffix == true ? "_#{name}" : "_#{suffix}"
           end
 
-          pairs = value_pairs_for(values, name)
           pairs.each do |label, value|
             enum_values[label] = value
             label = label.to_s
@@ -284,6 +285,23 @@ module ActiveRecord
         end
 
         enum_values.freeze
+      end
+
+      def value_pairs_for(values, name)
+        if values.respond_to?(:each_pair)
+          values.each_pair
+        elsif string_backed_attribute?(name)
+          values.to_h { |value| [value.to_sym, value.to_s] }
+        else
+          values.each_with_index
+        end
+      end
+
+      def string_backed_attribute?(name)
+        return false unless table_name
+
+        column = connection.schema_cache.columns_hash(table_name)[name]
+        column && type_for_column(column).is_a?(ActiveModel::Type::String)
       end
 
       def inherited(base)
@@ -318,16 +336,6 @@ module ActiveRecord
               # scope :not_active, -> { where.not(status: 0) }
               klass.send(:detect_enum_conflict!, name, "not_#{value_method_name}", true)
               klass.scope "not_#{value_method_name}", -> { where(predicate_builder[name, value, :is_distinct_from]) }
-            end
-          end
-
-          def value_pairs_for(values, name)
-            if values.respond_to?(:each_pair)
-              values.each_pair
-            elsif klass.type_for_attribute(name).subtype.is_a?(ActiveModel::Type::String)
-              values.to_h { |value| [value.to_sym, value.to_s] }
-            else
-              values.each_with_index
             end
           end
       end
