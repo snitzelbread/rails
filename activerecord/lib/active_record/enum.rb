@@ -258,7 +258,7 @@ module ActiveRecord
             suffix == true ? "_#{name}" : "_#{suffix}"
           end
 
-          pairs = define_pairs(values, name)
+          pairs = value_pairs_for(values, name)
           pairs.each do |label, value|
             enum_values[label] = value
             label = label.to_s
@@ -320,6 +320,16 @@ module ActiveRecord
               klass.scope "not_#{value_method_name}", -> { where(predicate_builder[name, value, :is_distinct_from]) }
             end
           end
+
+          def value_pairs_for(values, name)
+            if values.respond_to?(:each_pair)
+              values.each_pair
+            elsif klass.type_for_attribute(name).subtype.is_a?(ActiveModel::Type::String)
+              values.to_h { |value| [value.to_sym, value.to_s] }
+            else
+              values.each_with_index
+            end
+          end
       end
       private_constant :EnumMethods
 
@@ -372,16 +382,6 @@ module ActiveRecord
         end
 
         values
-      end
-
-      def define_pairs(values, name)
-        if values.respond_to?(:each_pair)
-          values.each_pair
-        elsif values.is_a?(Array) && type_for_attribute(name).subtype.is_a?(ActiveModel::Type::String)
-          values.to_h { |value| [value.to_sym, value.to_s] }
-        else
-          values.each_with_index
-        end
       end
 
       def assert_valid_enum_options(options)
