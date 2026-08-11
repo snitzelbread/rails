@@ -218,6 +218,16 @@ module ActiveRecord
       _enum(name, values, **options)
     end
 
+    def define_pairs(values, name)
+      if values.respond_to?(:each_pair)
+        values.each_pair
+      elsif values.is_a?(Array) && type_for_attribute(name).subtype.is_a?(ActiveModel::Type::String)
+        values.to_h { |value| [value.to_sym, value.to_s] }
+      else
+        values.each_with_index
+      end
+    end
+
     private
       def _enum(name, values, prefix: nil, suffix: nil, scopes: true, instance_methods: true, validate: false, **options)
         values = assert_valid_enum_definition_values(values)
@@ -284,16 +294,6 @@ module ActiveRecord
         end
 
         enum_values.freeze
-      end
-
-      def define_pairs(values, name)
-        if values.respond_to?(:each_pair)
-          values.each_pair
-        elsif values.is_a?(Array) && type_for_attribute(name).subtype.is_a?(ActiveModel::Type::String)
-          values.to_h { |value| [value.to_sym, value.to_s] }
-        else
-          values.each_with_index
-        end
       end
 
       def inherited(base)
