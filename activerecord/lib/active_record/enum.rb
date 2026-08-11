@@ -258,7 +258,7 @@ module ActiveRecord
             suffix == true ? "_#{name}" : "_#{suffix}"
           end
 
-          pairs = values.respond_to?(:each_pair) ? values.each_pair : values.each_with_index
+          pairs = define_pairs(values, name)
           pairs.each do |label, value|
             enum_values[label] = value
             label = label.to_s
@@ -284,6 +284,16 @@ module ActiveRecord
         end
 
         enum_values.freeze
+      end
+
+      def define_pairs(values, name)
+        if values.respond_to?(:each_pair)
+          values.each_pair
+        elsif values.is_a?(Array) && type_for_attribute(name).subtype.is_a?(ActiveModel::Type::String)
+          values.to_h { |value| [value.to_sym, value.to_s] }
+        else
+          values.each_with_index
+        end
       end
 
       def inherited(base)
