@@ -291,7 +291,7 @@ module ActiveRecord
         if values.respond_to?(:each_pair)
           values.each_pair
         elsif string_backed_attribute?(name)
-          values.to_h { |value| [value.to_sym, value.to_s] }
+          values.index_with(&:to_s)
         else
           values.each_with_index
         end
