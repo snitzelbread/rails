@@ -237,6 +237,8 @@ module ActiveRecord
 
         attribute(name, **options)
 
+        pairs = value_pairs_for(values, name)
+
         decorate_attributes([name]) do |_name, subtype|
           if subtype == ActiveModel::Type.default_value
             raise "Undeclared attribute type for enum '#{name}' in #{self.name}. Enums must be" \
@@ -258,7 +260,6 @@ module ActiveRecord
             suffix == true ? "_#{name}" : "_#{suffix}"
           end
 
-          pairs = values.respond_to?(:each_pair) ? values.each_pair : values.each_with_index
           pairs.each do |label, value|
             enum_values[label] = value
             label = label.to_s
@@ -285,6 +286,23 @@ module ActiveRecord
 
         enum_values.freeze
       end
+
+    def value_pairs_for(values, name)
+      if values.respond_to?(:each_pair)
+        values.each_pair
+      elsif string_backed_attribute?(name)
+        values.index_with(&:to_s)
+      else
+        values.each_with_index
+      end
+    end
+
+    def string_backed_attribute?(name)
+      return false unless table_name
+
+      column = connection.schema_cache.columns_hash(table_name)[name]
+      column && type_for_column(column).is_a?(ActiveModel::Type::String)
+    end
 
       def inherited(base)
         base.defined_enums = defined_enums.deep_dup
