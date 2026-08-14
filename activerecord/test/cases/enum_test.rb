@@ -767,6 +767,31 @@ class EnumTest < ActiveRecord::TestCase
     assert_predicate book, :symbol_status_proposed?
   end
 
+  test "enum in array form maps to string values when the column is a string type" do
+    klass = Class.new(ActiveRecord::Base) do
+      self.table_name = "books"
+      enum :symbol_status, [:proposed, :written, :published]
+    end
+
+    assert_equal "proposed", klass.symbol_statuses[:proposed]
+    assert_equal "written", klass.symbol_statuses["written"]
+    assert_equal "published", klass.symbol_statuses[:published]
+
+    book = klass.new(symbol_status: :written)
+    assert_equal "written", book.symbol_status
+    assert_equal "written", book.symbol_status_for_database
+  end
+
+  test "enum can be declared on an abstract class with no table" do
+    klass = Class.new(ActiveRecord::Base) do
+      self.abstract_class = true
+      enum :status, [:proposed, :written, :published]
+    end
+
+    assert_equal 0, klass.statuses[:proposed]
+    assert_equal 1, klass.statuses[:written]
+  end
+
   test "query state by predicate with prefix" do
     assert_predicate @book, :author_visibility_visible?
     assert_not_predicate @book, :author_visibility_invisible?
